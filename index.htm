@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>21-Day Prayer Tracker</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 20px;
+            background-color: #f4f7f6;
+            color: #333;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: auto;
+            background: #fff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: #007bff;
+            margin-bottom: 25px;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+
+        .tracker-grid {
+            display: grid;
+            grid-template-columns: 1fr repeat(21, minmax(30px, 1fr)); /* 1 for item + 21 days */
+            gap: 5px;
+            overflow-x: auto;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 10px;
+        }
+
+        .grid-header, .grid-cell {
+            padding: 8px 5px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 0.85em;
+            white-space: nowrap;
+        }
+
+        .grid-header {
+            background-color: #e9ecef;
+            color: #495057;
+            position: sticky; /* Keep header visible when scrolling horizontally */
+            left: 0;
+            z-index: 10;
+        }
+
+        .item-label {
+            font-weight: bold;
+            text-align: left;
+            background-color: #f8f9fa;
+            position: sticky;
+            left: 0;
+            z-index: 5; /* Lower than the date headers */
+        }
+        
+        /* Style for the date headers (top row) */
+        .grid-header.date-col {
+             background-color: #007bff;
+             color: white;
+             font-weight: normal;
+        }
+
+
+        .grid-cell input[type="checkbox"] {
+            transform: scale(1.2);
+            cursor: pointer;
+        }
+
+        .grid-row:nth-child(even) .grid-cell:not(.item-label) {
+            background-color: #fcfcfc;
+        }
+
+        .reset-button {
+            display: block;
+            width: 200px;
+            margin: 20px auto 0;
+            padding: 10px;
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.3s;
+        }
+
+        .reset-button:hover {
+            background-color: #c82333;
+        }
+
+        .notes {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #fff3cd;
+            border: 1px solid #ffeeba;
+            border-radius: 8px;
+            color: #856404;
+        }
+
+        /* Adjustments for smaller screens to make the grid usable */
+        @media (max-width: 600px) {
+            .tracker-grid {
+                font-size: 0.75em;
+            }
+            .grid-header, .grid-cell {
+                padding: 5px 3px;
+            }
+            .reset-button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🙏 21-Day Prayer Tracker 🙏</h1>
+        <p class="notes">
+            **Tracking Period:** October 12, 2025 – November 1, 2025 (21 Days).
+            Your progress is automatically saved in your browser's **Local Storage**!
+        </p>
+
+        <div id="prayerTracker" class="tracker-grid">
+            </div>
+
+        <button class="reset-button" onclick="resetTracker()">Reset All Data</button>
+
+    </div>
+
+    <script>
+        const TRACKER_START_DATE = new Date('2025-10-12T00:00:00');
+        const NUM_DAYS = 21;
+        const PRAYER_ITEMS = [
+            'Holy Mass',
+            'Bible Reading',
+            'Daniel Prayer',
+            'Rosary',
+            'Shalom TV Prayer'
+        ];
+        const STORAGE_KEY = 'prayerTrackerData';
+        const trackerDiv = document.getElementById('prayerTracker');
+
+        /**
+         * Calculates the date for a given day index (0-based) from the start date.
+         * @param {number} index - The day number (e.g., 0 for Oct 12, 1 for Oct 13).
+         * @returns {Date} The calculated date.
+         */
+        function getDateForIndex(index) {
+            const date = new Date(TRACKER_START_DATE);
+            date.setDate(TRACKER_START_DATE.getDate() + index);
+            return date;
+        }
+
+        /**
+         * Loads the stored data from localStorage.
+         * @returns {Object} The tracking data or an empty object if none exists.
+         */
+        function loadData() {
+            const storedData = localStorage.getItem(STORAGE_KEY);
+            return storedData ? JSON.parse(storedData) : {};
+        }
+
+        /**
+         * Saves the current tracking data to localStorage.
+         * @param {Object} data - The tracking data to save.
+         */
+        function saveData(data) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        }
+
+        /**
+         * Handles the change event for any checkbox.
+         * Updates the internal data structure and saves it to localStorage.
+         * @param {Event} event - The checkbox change event.
+         */
+        function handleCheckboxChange(event) {
+            const checkbox = event.target;
+            const item = checkbox.dataset.item;
+            const dateKey = checkbox.dataset.date;
+            
+            const data = loadData();
+            
+            if (!data[dateKey]) {
+                data[dateKey] = {};
+            }
+            
+            data[dateKey][item] = checkbox.checked;
+            saveData(data);
+        }
+
+        /**
+         * Generates and renders the entire tracker grid.
+         */
+        function renderTracker() {
+            const data = loadData();
+            let html = '';
+
+            // 1. Generate the Header Row (Date Labels)
+            html += `<div class="grid-header">Prayer Item</div>`;
+            for (let i = 0; i < NUM_DAYS; i++) {
+                const date = getDateForIndex(i);
+                // Format as '12/Oct'
+                const dateStr = `${date.getDate()}/${date.toLocaleString('default', { month: 'short' })}`;
+                html += `<div class="grid-header date-col">${dateStr}</div>`;
+            }
+
+            // 2. Generate the Prayer Item Rows
+            PRAYER_ITEMS.forEach(item => {
+                // Label for the prayer item
+                html += `<div class="grid-cell item-label">${item}</div>`;
+                
+                // Checkboxes for all 21 days
+                for (let i = 0; i < NUM_DAYS; i++) {
+                    const date = getDateForIndex(i);
+                    const dateKey = date.toISOString().split('T')[0]; // e.g., '2025-10-12'
+
+                    // Check if the prayer was done on this day based on stored data
+                    const isChecked = data[dateKey] && data[dateKey][item] === true ? 'checked' : '';
+                    
+                    // Create the unique checkbox HTML
+                    const checkboxHtml = `
+                        <input 
+                            type="checkbox" 
+                            data-item="${item}" 
+                            data-date="${dateKey}"
+                            ${isChecked}
+                            onchange="handleCheckboxChange(event)"
+                        >
+                    `;
+                    
+                    html += `<div class="grid-cell">${checkboxHtml}</div>`;
+                }
+            });
+
+            trackerDiv.innerHTML = html;
+        }
+
+        /**
+         * Clears all tracking data from localStorage and re-renders the empty grid.
+         */
+        function resetTracker() {
+            if (confirm('Are you sure you want to PERMANENTLY reset all your saved prayer tracking data?')) {
+                localStorage.removeItem(STORAGE_KEY);
+                renderTracker();
+                alert('Tracker data has been reset!');
+            }
+        }
+
+        // Initial render when the page loads
+        document.addEventListener('DOMContentLoaded', renderTracker);
+    </script>
+</body>
+</html>
